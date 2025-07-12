@@ -37,17 +37,6 @@ The installation script will:
 - Set up shell integration automatically
 - Create the necessary directories for Node.js versions
 
-### Install with Homebrew (macOS and Linux)
-
-```bash
-# Install from Homebrew
-brew install nvmx
-
-# Enable shell integration
-echo 'source "$(brew --prefix)/etc/nvmx.sh"' >> ~/.zshrc  # or ~/.bashrc
-source ~/.zshrc  # or source ~/.bashrc
-```
-
 ### Install from source
 
 ```bash
@@ -243,33 +232,6 @@ The test suite covers:
 - Type validation tests
 
 ## Contributing
-
-### Homebrew Formula
-
-The project includes a Homebrew formula to make installation easy on macOS and Linux systems. To update the formula:
-
-1. Make sure you have a tagged release on GitHub
-2. Run the formula generation script:
-   ```bash
-   npm run homebrew 0.1.0  # Replace with your version
-   # or directly:
-   ./scripts/generate-homebrew-formula.sh 0.1.0
-   ```
-3. Test the formula locally:
-   ```bash
-   brew install --build-from-source ./homebrew/nvmx-0.1.0.rb
-   ```
-4. Submit the formula to Homebrew:
-   ```bash
-   brew tap homebrew/core
-   cp ./homebrew/nvmx-0.1.0.rb $(brew --repository homebrew/core)/Formula/n/nvmx.rb
-   cd $(brew --repository homebrew/core)
-   git checkout -b nvmx-0.1.0
-   git add Formula/n/nvmx.rb
-   git commit -m "nvmx 0.1.0 (new formula)"
-   git push -u origin nvmx-0.1.0
-   ```
-5. Create a pull request on the [Homebrew Core repository](https://github.com/Homebrew/homebrew-core)
 
 ## License
 

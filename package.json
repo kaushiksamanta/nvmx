@@ -17,8 +17,7 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
     "dev": "ts-node src/cli.ts",
-    "prepare": "npm run build && npm run format && npm run lint",
-    "homebrew": "scripts/generate-homebrew-formula.sh"
+    "prepare": "npm run build && npm run format && npm run lint"
   },
   "keywords": [
     "node",
