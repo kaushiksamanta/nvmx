@@ -1,0 +1,94 @@
+#!/bin/sh
+# nvmx - POSIX-compliant Node.js version manager
+
+set -e
+
+# Determine the directory where nvmx is installed
+if [ -L "$0" ]; then
+  # Handle symlinks
+  SCRIPT_PATH=$(readlink "$0")
+  NVMX_DIR=$(cd "$(dirname "$SCRIPT_PATH")/.." && pwd)
+else
+  NVMX_DIR=$(cd "$(dirname "$0")/.." && pwd)
+fi
+
+# Default paths
+NVMX_HOME="${NVMX_HOME:-$HOME/.nvmx}"
+NVMX_VERSIONS_DIR="${NVMX_HOME}/versions"
+
+# Ensure the nvmx directories exist
+mkdir -p "${NVMX_HOME}"
+mkdir -p "${NVMX_VERSIONS_DIR}"
+
+# Function to handle the 'use' command directly in the shell
+nvmx_use() {
+  VERSION="$1"
+  
+  if [ -z "$VERSION" ]; then
+    echo "Error: Version argument is required for 'use' command"
+    return 1
+  fi
+  
+  # Check if the version exists
+  VERSION_DIR="${NVMX_VERSIONS_DIR}/${VERSION}"
+  if [ ! -d "$VERSION_DIR" ]; then
+    echo "Error: Node.js version $VERSION is not installed"
+    return 1
+  fi
+  
+  # Output the shell commands to modify PATH
+  echo "export PATH=\"${VERSION_DIR}/bin:\$PATH\""
+  echo "echo \"Now using Node.js ${VERSION}\""
+}
+
+# Function to handle the 'shell' command for shell integration
+nvmx_shell() {
+  echo "Outputting shell integration code..."
+  cat << 'EOF'
+# nvmx shell integration
+nvmx() {
+  local command="$1"
+  if [ "$command" = "use" ]; then
+    eval "$(command nvmx use "$2")"
+  else
+    command nvmx "$@"
+  fi
+}
+
+# Auto-use .nvmxrc or .node-version if present
+nvmx_auto() {
+  local nvmx_rc=""
+  if [ -f ".nvmxrc" ]; then
+    nvmx_rc=".nvmxrc"
+  elif [ -f ".node-version" ]; then
+    nvmx_rc=".node-version"
+  fi
+  
+  if [ -n "$nvmx_rc" ]; then
+    local version=$(cat "$nvmx_rc" | tr -d '[:space:]')
+    if [ -n "$version" ]; then
+      nvmx use "$version"
+    fi
+  fi
+}
+
+# Add to your .bashrc or .zshrc:
+# source <(nvmx shell)
+# cd() { builtin cd "$@" && nvmx_auto; }
+EOF
+}
+
+# Handle special commands that need to be executed in the shell
+case "$1" in
+  "use")
+    nvmx_use "$2"
+    exit $?
+    ;;
+  "shell")
+    nvmx_shell
+    exit $?
+    ;;
+esac
+
+# For all other commands, delegate to the Node.js CLI
+exec node "${NVMX_DIR}/dist/cli.js" "$@"

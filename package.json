@@ -1,0 +1,59 @@
+{
+  "name": "nvmx",
+  "version": "0.1.0",
+  "description": "POSIX-compliant Node.js version manager written in TypeScript",
+  "main": "dist/cli.js",
+  "bin": {
+    "nvmx": "bin/nvmx"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --fix",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\"",
+    "dev": "ts-node src/cli.ts",
+    "prepare": "npm run build && npm run format && npm run lint"
+  },
+  "keywords": [
+    "node",
+    "version",
+    "manager",
+    "nvm",
+    "typescript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@sinclair/typebox": "^0.34.37",
+    "axios": "^1.6.0",
+    "commander": "^11.0.0",
+    "extract-zip": "^2.0.1",
+    "semver": "^7.5.4",
+    "tar": "^6.2.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.5",
+    "@types/node": "^20.8.2",
+    "@types/semver": "^7.5.3",
+    "@types/tar": "^6.1.6",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.5.1",
+    "jest": "^29.7.0",
+    "prettier": "^3.6.2",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
