@@ -1,95 +1,127 @@
-#!/bin/sh
-# nvmx install.sh - POSIX-compliant script to install Node.js versions
-
+#!/bin/bash
 set -e
 
-# Default paths
+# NVMX Installer
+# Usage: curl -o- https://raw.githubusercontent.com/kaushiksamanta/nvmx/main/scripts/install.sh | bash
+# or: wget -qO- https://raw.githubusercontent.com/kaushiksamanta/nvmx/main/scripts/install.sh | bash
+
+{ # This ensures the entire script is downloaded
+
+NVMX_VERSION="0.1.0"
 NVMX_HOME="${NVMX_HOME:-$HOME/.nvmx}"
-NVMX_VERSIONS_DIR="${NVMX_HOME}/versions"
-NVMX_CACHE_DIR="${NVMX_HOME}/cache"
+NVMX_SOURCE="https://github.com/kaushiksamanta/nvmx"
+NVMX_INSTALL_DIR="$NVMX_HOME/nvmx"
+NVMX_REPO="kaushiksamanta/nvmx"
 
-# Ensure directories exist
-mkdir -p "${NVMX_VERSIONS_DIR}"
-mkdir -p "${NVMX_CACHE_DIR}"
+# Detect profile file
+detect_profile() {
+  local DETECTED_PROFILE
+  DETECTED_PROFILE=""
+  
+  if [ -n "${PROFILE}" ]; then
+    echo "${PROFILE}"
+    return
+  fi
 
-# Get arguments
-VERSION="$1"
-if [ -z "$VERSION" ]; then
-  echo "Error: Version argument is required"
+  if [ -f "$HOME/.bash_profile" ]; then
+    DETECTED_PROFILE="$HOME/.bash_profile"
+  elif [ -f "$HOME/.bashrc" ]; then
+    DETECTED_PROFILE="$HOME/.bashrc"
+  elif [ -f "$HOME/.zshrc" ]; then
+    DETECTED_PROFILE="$HOME/.zshrc"
+  fi
+
+  if [ -z "$DETECTED_PROFILE" ]; then
+    if [ -n "$BASH_VERSION" ]; then
+      if [ -f "$HOME/.bashrc" ]; then
+        DETECTED_PROFILE="$HOME/.bashrc"
+      fi
+    elif [ -n "$ZSH_VERSION" ]; then
+      DETECTED_PROFILE="$HOME/.zshrc"
+    fi
+  fi
+
+  if [ -z "$DETECTED_PROFILE" ]; then
+    echo "Profile not found. Please manually add the following to your shell profile:"
+    echo ""
+    echo 'export PATH="$HOME/.nvmx/bin:$PATH"'
+    echo 'eval "$(nvmx shell)"'
+    return
+  fi
+  
+  echo "$DETECTED_PROFILE"
+}
+
+# Check if Node.js is installed
+if ! command -v node >/dev/null 2>&1; then
+  echo "Error: Node.js is required to install nvmx"
+  echo "Please install Node.js first and then try again"
   exit 1
 fi
 
-# Remove 'v' prefix if present
-VERSION=$(echo "$VERSION" | sed 's/^v//')
+# Create NVMX_HOME directory if it doesn't exist
+mkdir -p "$NVMX_HOME"
+mkdir -p "$NVMX_HOME/bin"
+mkdir -p "$NVMX_HOME/versions"
 
-# Determine system architecture
-get_arch() {
-  ARCH=$(uname -m)
-  case "$ARCH" in
-    x86_64)
-      echo "x64"
-      ;;
-    aarch64|arm64)
-      echo "arm64"
-      ;;
-    *)
-      echo "Error: Unsupported architecture: $ARCH"
-      exit 1
-      ;;
-  esac
-}
+# Download and extract the latest release
+echo "Downloading nvmx v${NVMX_VERSION}..."
+TEMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TEMP_DIR"' EXIT
 
-# Determine system platform
-get_platform() {
-  PLATFORM=$(uname -s)
-  case "$PLATFORM" in
-    Darwin)
-      echo "darwin"
-      ;;
-    Linux)
-      echo "linux"
-      ;;
-    *)
-      echo "Error: Unsupported platform: $PLATFORM"
-      exit 1
-      ;;
-  esac
-}
-
-ARCH=$(get_arch)
-PLATFORM=$(get_platform)
-
-# Construct download URL
-NODE_DIST_URL="https://nodejs.org/dist/v${VERSION}"
-TARBALL_NAME="node-v${VERSION}-${PLATFORM}-${ARCH}.tar.gz"
-DOWNLOAD_URL="${NODE_DIST_URL}/${TARBALL_NAME}"
-TARBALL_PATH="${NVMX_CACHE_DIR}/${TARBALL_NAME}"
-
-# Download the tarball
-echo "Downloading Node.js v${VERSION} for ${PLATFORM}-${ARCH}..."
-if command -v curl > /dev/null 2>&1; then
-  curl -L -o "${TARBALL_PATH}" "${DOWNLOAD_URL}"
-elif command -v wget > /dev/null 2>&1; then
-  wget -O "${TARBALL_PATH}" "${DOWNLOAD_URL}"
+if command -v curl >/dev/null 2>&1; then
+  curl -L -o "$TEMP_DIR/nvmx.tar.gz" "https://github.com/$NVMX_REPO/archive/refs/tags/v${NVMX_VERSION}.tar.gz"
+elif command -v wget >/dev/null 2>&1; then
+  wget -O "$TEMP_DIR/nvmx.tar.gz" "https://github.com/$NVMX_REPO/archive/refs/tags/v${NVMX_VERSION}.tar.gz"
 else
-  echo "Error: Neither curl nor wget is available"
+  echo "Error: curl or wget is required to install nvmx"
   exit 1
 fi
 
-# Create version directory
-VERSION_DIR="${NVMX_VERSIONS_DIR}/v${VERSION}"
-mkdir -p "${VERSION_DIR}"
+echo "Extracting..."
+tar -xzf "$TEMP_DIR/nvmx.tar.gz" -C "$TEMP_DIR"
+mv "$TEMP_DIR/nvmx-${NVMX_VERSION}" "$NVMX_INSTALL_DIR"
 
-# Extract the tarball
-echo "Extracting Node.js v${VERSION}..."
-tar -xzf "${TARBALL_PATH}" -C "${NVMX_CACHE_DIR}"
-EXTRACTED_DIR="${NVMX_CACHE_DIR}/node-v${VERSION}-${PLATFORM}-${ARCH}"
+# Install dependencies and build
+echo "Installing dependencies..."
+cd "$NVMX_INSTALL_DIR"
+npm install --production
 
-# Move files to version directory
-cp -R "${EXTRACTED_DIR}/"* "${VERSION_DIR}/"
+echo "Building nvmx..."
+npm run build
 
-# Clean up
-rm -rf "${EXTRACTED_DIR}"
+# Create symlink to bin directory
+echo "Creating symlinks..."
+ln -sf "$NVMX_INSTALL_DIR/bin/nvmx" "$NVMX_HOME/bin/nvmx"
 
-echo "Node.js v${VERSION} has been installed successfully"
-echo "To use this version, run: nvmx use v${VERSION}"
+# Add to PATH and shell integration
+PROFILE=$(detect_profile)
+if [ -n "$PROFILE" ]; then
+  echo "Adding nvmx to $PROFILE..."
+  
+  # Check if already in PATH
+  if ! grep -q "export PATH=\"\$HOME/.nvmx/bin:\$PATH\"" "$PROFILE"; then
+    echo "" >> "$PROFILE"
+    echo "# nvmx" >> "$PROFILE"
+    echo "export PATH=\"\$HOME/.nvmx/bin:\$PATH\"" >> "$PROFILE"
+  fi
+  
+  # Check if shell integration is already added
+  if ! grep -q "eval \"\$(nvmx shell)\"" "$PROFILE"; then
+    echo "eval \"\$(nvmx shell)\"" >> "$PROFILE"
+  fi
+  
+  echo "nvmx has been added to your PATH and shell integration has been set up."
+  echo "Please restart your terminal or run 'source $PROFILE' to start using nvmx."
+fi
+
+echo ""
+echo "nvmx v${NVMX_VERSION} has been installed successfully!"
+echo ""
+echo "To get started, run:"
+echo "  nvmx install lts"
+echo "  nvmx use lts"
+echo ""
+echo "For more information, visit: $NVMX_SOURCE"
+
+} # This ensures the entire script is downloaded
