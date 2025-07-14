@@ -13,6 +13,10 @@ A POSIX-compliant Node.js version manager written in TypeScript, with shell scri
 - Support for `.nvmxrc` or `.node-version` file auto-loading
 - Compatible with Linux/macOS (POSIX environments)
 - Comprehensive test suite using Vitest
+- **Version aliases** for easy reference to commonly used versions
+- **Remote version caching** for faster operation
+- **Shell completions** for Bash, Zsh, and Fish
+- **Automatic updates** with notifications for new versions
 
 ## Installation
 
@@ -78,12 +82,17 @@ npm run dev
 
 ### Core Commands
 
-- `nvmx install <version>` – Downloads and installs a specific Node.js version
-- `nvmx use <version>` – Sets active Node.js version for the current shell
+- `nvmx install <version|alias>` – Downloads and installs a specific Node.js version
+- `nvmx use <version|alias>` – Sets active Node.js version for the current shell
 - `nvmx list` – Lists installed versions
 - `nvmx ls-remote` – Lists available Node.js versions from the official source
 - `nvmx current` – Shows the currently active version
 - `nvmx uninstall <version>` – Removes a specific Node.js version
+- `nvmx alias` – Manages version aliases
+- `nvmx cache` – Manages remote version cache
+- `nvmx completion` – Generates shell completion scripts
+- `nvmx update` – Updates nvmx to the latest version
+- `nvmx check-update` – Checks if a new version is available
 
 ### Shell Integration
 
@@ -154,6 +163,75 @@ nvmx config get proxy
 nvmx config get default
 ```
 
+### Aliases
+
+nvmx supports creating aliases for Node.js versions, making it easier to reference commonly used versions:
+
+```bash
+# List all aliases
+nvmx alias list
+
+# Create an alias
+nvmx alias set lts v18.17.1
+nvmx alias set project-a v16.14.2
+
+# Use an alias
+nvmx use lts
+nvmx use project-a
+
+# Remove an alias
+nvmx alias rm project-a
+```
+
+### Remote Version Caching
+
+nvmx caches the list of remote versions to improve performance:
+
+```bash
+# List remote versions (uses cache if available)
+nvmx ls-remote
+
+# Force refresh the cache
+nvmx ls-remote --force
+
+# Set cache TTL (time-to-live) in minutes
+nvmx cache set-ttl 60
+
+# Clear the remote versions cache
+nvmx cache clear-remote
+```
+
+### Shell Completions
+
+nvmx provides shell completion scripts for Bash, Zsh, and Fish:
+
+```bash
+# Generate and install Bash completion
+nvmx completion bash > ~/.nvmx/bash_completion
+echo 'source ~/.nvmx/bash_completion' >> ~/.bashrc
+
+# Generate and install Zsh completion
+nvmx completion zsh > ~/.nvmx/zsh_completion
+echo 'source ~/.nvmx/zsh_completion' >> ~/.zshrc
+
+# Generate and install Fish completion
+nvmx completion fish > ~/.config/fish/completions/nvmx.fish
+```
+
+### Automatic Updates
+
+nvmx can check for updates and update itself:
+
+```bash
+# Check for updates
+nvmx check-update
+
+# Update nvmx to the latest version
+nvmx update
+```
+
+nvmx will also notify you when a new version is available when running other commands.
+
 ## Project Architecture
 
 ### Type System
@@ -161,12 +239,19 @@ nvmx config get default
 nvmx uses TypeBox for runtime type validation and TypeScript for static type checking:
 
 ```
-src/types/
-├── common.ts    - Common types (Version, Path, Arch, Platform, Url)
-├── config.ts    - Configuration types (NvmxConfig, CacheConfig)
-├── manager.ts   - Version management types (NodeRelease, InstalledVersions)
-├── cli.ts       - CLI-related types (NvmxCommand, ConfigKey)
-└── index.ts     - Re-exports all types for easy importing
+src/
+├── cli.ts       - Command-line interface
+├── config.ts    - Configuration management
+├── manager.ts   - Version management
+├── utils.ts     - Utility functions
+├── completions.ts - Shell completion scripts
+├── update.ts    - Automatic update functionality
+└── types/
+    ├── common.ts    - Common types (Version, Path, Arch, Platform, Url)
+    ├── config.ts    - Configuration types (NvmxConfig, CacheConfig, Aliases)
+    ├── manager.ts   - Version management types (NodeRelease, InstalledVersions)
+    ├── cli.ts       - CLI-related types (NvmxCommand, ConfigKey, AliasCommand)
+    └── index.ts     - Re-exports all types for easy importing
 ```
 
 TypeBox provides several benefits:
@@ -230,6 +315,10 @@ The test suite covers:
 - Unit tests for all modules
 - Integration tests for CLI commands
 - Type validation tests
+- Tests for aliases and version resolution
+- Tests for remote version caching
+- Tests for shell completion scripts
+- Tests for automatic updates
 
 ## Contributing
 

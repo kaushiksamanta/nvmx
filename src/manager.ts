@@ -13,7 +13,13 @@ import {
   extractTarball,
   executeShellScript,
 } from './utils'
-import { getMirrorUrl, getProxyUrl } from './config'
+import {
+  getMirrorUrl,
+  getProxyUrl,
+  getRemoteVersionsCache,
+  setRemoteVersionsCache,
+  isRemoteVersionsCacheValid,
+} from './config'
 import { Path, Url, InstalledVersions, RemoteVersions } from './types'
 
 /**
@@ -53,9 +59,19 @@ export function getInstalledVersions(): InstalledVersions {
 
 /**
  * Get a list of available Node.js versions from the remote server
+ * Uses cache if available and valid
  */
-export async function getRemoteVersions(): Promise<RemoteVersions> {
+export async function getRemoteVersions(forceRefresh = false): Promise<RemoteVersions> {
   try {
+    // Check if we have a valid cache and should use it
+    if (!forceRefresh && isRemoteVersionsCacheValid()) {
+      const cache = getRemoteVersionsCache()
+      if (cache && cache.versions.length > 0) {
+        return cache.versions as RemoteVersions
+      }
+    }
+
+    // If no valid cache or force refresh, fetch from remote
     const mirrorUrl = getMirrorUrl()
     const proxyUrl = getProxyUrl()
 
@@ -79,6 +95,7 @@ export async function getRemoteVersions(): Promise<RemoteVersions> {
       }
     }
 
+    console.log('Fetching available Node.js versions from remote server...')
     const response = await axios.get(`${mirrorUrl}/index.json`, config)
 
     // Define proper type for Node.js release
@@ -92,11 +109,23 @@ export async function getRemoteVersions(): Promise<RemoteVersions> {
       security?: boolean
     }
 
-    return response.data
+    const versions = response.data
       .map((release: NodeReleaseInfo) => release.version)
       .filter((version: string) => semver.valid(version))
       .sort((a: string, b: string) => semver.compare(b, a)) // Sort in descending order
+
+    // Cache the results
+    setRemoteVersionsCache(versions)
+
+    return versions as RemoteVersions
   } catch (error) {
+    // If fetching fails, try to use cache even if expired
+    const cache = getRemoteVersionsCache()
+    if (cache && cache.versions.length > 0) {
+      console.warn('Failed to fetch from remote, using cached versions (may be outdated)')
+      return cache.versions as RemoteVersions
+    }
+
     console.error('Error fetching remote versions:', error)
     throw new Error(`Failed to fetch available Node.js versions: ${error}`)
   }

@@ -59,6 +59,29 @@ vi.mock('../src/config', () => ({
   setProxyUrl: vi.fn(),
   getDefaultVersion: vi.fn(),
   setDefaultVersion: vi.fn(),
+  getAliases: vi.fn(),
+  getAlias: vi.fn(),
+  setAlias: vi.fn(),
+  removeAlias: vi.fn(),
+  resolveVersionOrAlias: vi.fn(),
+  getRemoteVersionsCache: vi.fn(),
+  setRemoteVersionsCache: vi.fn(),
+  isRemoteVersionsCacheValid: vi.fn(),
+  setRemoteVersionsCacheTTL: vi.fn(),
+}))
+
+// Mock the completions module
+vi.mock('../src/completions', () => ({
+  generateBashCompletion: vi.fn(),
+  generateZshCompletion: vi.fn(),
+  generateFishCompletion: vi.fn(),
+}))
+
+// Mock the update module
+vi.mock('../src/update', () => ({
+  checkForUpdates: vi.fn(),
+  updateNvmx: vi.fn(),
+  notifyUpdates: vi.fn(),
 }))
 
 // Mock console.log and console.error
@@ -193,5 +216,106 @@ describe('CLI', () => {
     expect(console.log).toHaveBeenCalledWith('Installed Node.js versions:')
     expect(console.log).toHaveBeenCalledWith('* v16.13.0')
     expect(console.log).toHaveBeenCalledWith('  v14.17.0')
+  })
+
+  // Test alias commands
+  it('should test the alias list command', async () => {
+    const config = await import('../src/config')
+    vi.mocked(config.getAliases).mockReturnValue({
+      lts: 'v16.13.0',
+      current: 'v17.0.0',
+    })
+
+    const aliasListAction = async (): Promise<void> => {
+      try {
+        const aliases = config.getAliases()
+        const aliasEntries = Object.entries(aliases)
+
+        console.log('Node.js version aliases:')
+        if (aliasEntries.length === 0) {
+          console.log('  No aliases configured')
+        } else {
+          aliasEntries.forEach(([name, version]) => {
+            console.log(`  ${name} -> ${version}`)
+          })
+        }
+      } catch (error) {
+        console.error('Error:', error)
+        process.exit(1)
+      }
+    }
+
+    await aliasListAction()
+
+    expect(config.getAliases).toHaveBeenCalled()
+    expect(console.log).toHaveBeenCalledWith('Node.js version aliases:')
+    expect(console.log).toHaveBeenCalledWith('  lts -> v16.13.0')
+    expect(console.log).toHaveBeenCalledWith('  current -> v17.0.0')
+  })
+
+  // Test completion commands
+  it('should test the completion bash command', async () => {
+    const completions = await import('../src/completions')
+    vi.mocked(completions.generateBashCompletion).mockReturnValue('# Bash completion script')
+
+    const completionBashAction = (): void => {
+      console.log(completions.generateBashCompletion())
+    }
+
+    completionBashAction()
+
+    expect(completions.generateBashCompletion).toHaveBeenCalled()
+    expect(console.log).toHaveBeenCalledWith('# Bash completion script')
+  })
+
+  // Test update commands
+  it('should test the update command', async () => {
+    const update = await import('../src/update')
+    vi.mocked(update.updateNvmx).mockResolvedValue({
+      success: true,
+      message: 'nvmx has been updated to v0.2.0',
+    })
+
+    const updateAction = async (): Promise<void> => {
+      try {
+        const result = await update.updateNvmx()
+        console.log(result.message)
+      } catch (error) {
+        console.error('Error:', error)
+        process.exit(1)
+      }
+    }
+
+    await updateAction()
+
+    expect(update.updateNvmx).toHaveBeenCalled()
+    expect(console.log).toHaveBeenCalledWith('nvmx has been updated to v0.2.0')
+  })
+
+  // Test cache commands
+  it('should test the cache set-ttl command', async () => {
+    const config = await import('../src/config')
+    vi.mocked(config.setRemoteVersionsCacheTTL).mockImplementation(() => {})
+
+    const cacheSetTtlAction = (minutes: string): void => {
+      try {
+        const ttl = parseInt(minutes, 10)
+        if (isNaN(ttl) || ttl <= 0) {
+          console.error('TTL must be a positive number')
+          process.exit(1)
+        }
+
+        config.setRemoteVersionsCacheTTL(ttl)
+        console.log(`Remote versions cache TTL set to ${ttl} minutes`)
+      } catch (error) {
+        console.error('Error:', error)
+        process.exit(1)
+      }
+    }
+
+    cacheSetTtlAction('60')
+
+    expect(config.setRemoteVersionsCacheTTL).toHaveBeenCalledWith(60)
+    expect(console.log).toHaveBeenCalledWith('Remote versions cache TTL set to 60 minutes')
   })
 })
