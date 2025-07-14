@@ -13,10 +13,10 @@ A POSIX-compliant Node.js version manager written in TypeScript, with shell scri
 - Support for `.nvmxrc` or `.node-version` file auto-loading
 - Compatible with Linux/macOS (POSIX environments)
 - Comprehensive test suite using Vitest
-- **Version aliases** for easy reference to commonly used versions
-- **Remote version caching** for faster operation
-- **Shell completions** for Bash, Zsh, and Fish
-- **Automatic updates** with notifications for new versions
+- Version aliases for easy reference to commonly used versions
+- Remote version caching for faster operation
+- Shell completions for Bash, Zsh, and Fish
+- Automatic updates with notifications for new versions
 
 ## Installation
 
