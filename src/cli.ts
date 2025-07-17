@@ -22,7 +22,20 @@ import {
   setProxyUrl,
   getDefaultVersion,
   setDefaultVersion,
+  getAliases,
+  getAlias,
+  setAlias,
+  removeAlias,
+  resolveVersionOrAlias,
+  setRemoteVersionsCache,
+  setRemoteVersionsCacheTTL,
 } from './config'
+import {
+  generateBashCompletion,
+  generateZshCompletion,
+  generateFishCompletion,
+} from './completions'
+import { checkForUpdates, updateNvmx, notifyUpdates } from './update'
 import { ConfigKey } from './types'
 
 // Initialize the program
@@ -36,35 +49,37 @@ program
 
 // Install command
 program
-  .command('install [version]')
-  .description('Install a specific Node.js version')
-  .action(async (version?: string) => {
+  .command('install [versionOrAlias]')
+  .description('Install a specific Node.js version or alias')
+  .action(async (versionOrAlias?: string) => {
     try {
       ensureDirectories()
 
-      if (!version) {
+      if (!versionOrAlias) {
         // If no version specified, try to read from .nvmxrc or .node-version
         const versionFile = findVersionFile()
         if (versionFile) {
           const fileVersion = readVersionFile(versionFile)
           if (fileVersion) {
-            version = fileVersion
-            console.log(`Using version ${version} from ${versionFile}`)
+            versionOrAlias = fileVersion
+            console.log(`Using version ${versionOrAlias} from ${versionFile}`)
           }
         }
 
         // If still no version, use default or latest
-        if (!version) {
-          version = getDefaultVersion()
-          if (!version) {
+        if (!versionOrAlias) {
+          versionOrAlias = getDefaultVersion()
+          if (!versionOrAlias) {
             console.log('No version specified, installing latest LTS version...')
             const versions = await getRemoteVersions()
-            version = versions.find(v => v.includes('lts')) || versions[0]
+            versionOrAlias = versions.find(v => v.includes('lts')) || versions[0]
           }
         }
       }
 
-      await installVersion(version)
+      // Resolve alias to actual version if it's an alias
+      const resolvedVersion = resolveVersionOrAlias(versionOrAlias)
+      await installVersion(resolvedVersion)
     } catch (error) {
       console.error('Error:', error)
       process.exit(1)
@@ -73,34 +88,37 @@ program
 
 // Use command
 program
-  .command('use [version]')
-  .description('Use a specific Node.js version')
-  .action(async (version?: string) => {
+  .command('use [versionOrAlias]')
+  .description('Use a specific Node.js version or alias')
+  .action(async (versionOrAlias?: string) => {
     try {
-      if (!version) {
+      if (!versionOrAlias) {
         // If no version specified, try to read from .nvmxrc or .node-version
         const versionFile = findVersionFile()
         if (versionFile) {
           const fileVersion = readVersionFile(versionFile)
           if (fileVersion) {
-            version = fileVersion
-            console.log(`Using version ${version} from ${versionFile}`)
+            versionOrAlias = fileVersion
+            console.log(`Using version ${versionOrAlias} from ${versionFile}`)
           }
         }
 
         // If still no version, use default
-        if (!version) {
-          version = getDefaultVersion()
-          if (!version) {
+        if (!versionOrAlias) {
+          versionOrAlias = getDefaultVersion()
+          if (!versionOrAlias) {
             console.error('No version specified and no default version set')
             process.exit(1)
           }
         }
       }
 
+      // Resolve alias to actual version if it's an alias
+      const resolvedVersion = resolveVersionOrAlias(versionOrAlias)
+
       // This command is handled by the shell script in bin/nvmx
       // Here we just validate the version
-      const normalizedVersion = normalizeVersion(version)
+      const normalizedVersion = normalizeVersion(resolvedVersion)
       if (!isVersionInstalled(normalizedVersion)) {
         console.error(
           `Node.js ${normalizedVersion} is not installed. Install it first with: nvmx install ${normalizedVersion}`,
@@ -108,9 +126,7 @@ program
         process.exit(1)
       }
 
-      console.log(
-        `To use Node.js ${normalizedVersion}, run: eval "$(nvmx use ${normalizedVersion})"`,
-      )
+      console.log(`To use Node.js ${normalizedVersion}, run: eval "$(nvmx use ${versionOrAlias})"`)
     } catch (error) {
       console.error('Error:', error)
       process.exit(1)
@@ -146,10 +162,11 @@ program
 program
   .command('ls-remote')
   .description('List available Node.js versions from the remote server')
-  .action(async () => {
+  .option('-f, --force', 'Force refresh the cache')
+  .action(async options => {
     try {
-      console.log('Fetching available Node.js versions...')
-      const versions = await getRemoteVersions()
+      const forceRefresh = options.force || false
+      const versions = await getRemoteVersions(forceRefresh)
 
       console.log('Available Node.js versions:')
       versions.slice(0, 20).forEach(version => {
@@ -159,6 +176,43 @@ program
       if (versions.length > 20) {
         console.log(`  ... and ${versions.length - 20} more`)
       }
+    } catch (error) {
+      console.error('Error:', error)
+      process.exit(1)
+    }
+  })
+
+// Cache commands
+const cacheCommand = program.command('cache').description('Manage nvmx cache')
+
+// Set remote versions cache TTL
+cacheCommand
+  .command('set-ttl <minutes>')
+  .description('Set the time-to-live for remote versions cache in minutes')
+  .action((minutes: string) => {
+    try {
+      const ttl = parseInt(minutes, 10)
+      if (isNaN(ttl) || ttl <= 0) {
+        console.error('TTL must be a positive number')
+        process.exit(1)
+      }
+
+      setRemoteVersionsCacheTTL(ttl)
+      console.log(`Remote versions cache TTL set to ${ttl} minutes`)
+    } catch (error) {
+      console.error('Error:', error)
+      process.exit(1)
+    }
+  })
+
+// Clear remote versions cache
+cacheCommand
+  .command('clear-remote')
+  .description('Clear the remote versions cache')
+  .action(() => {
+    try {
+      setRemoteVersionsCache([])
+      console.log('Remote versions cache cleared')
     } catch (error) {
       console.error('Error:', error)
       process.exit(1)
@@ -267,10 +321,157 @@ program
     process.exit(0) // Exit with success code to let the shell script handle it
   })
 
+// Alias commands
+const aliasCommand = program.command('alias').description('Manage Node.js version aliases')
+
+// List all aliases
+aliasCommand
+  .command('list')
+  .alias('ls')
+  .description('List all aliases')
+  .action(() => {
+    try {
+      const aliases = getAliases()
+      const aliasEntries = Object.entries(aliases)
+
+      console.log('Node.js version aliases:')
+      if (aliasEntries.length === 0) {
+        console.log('  No aliases configured')
+      } else {
+        aliasEntries.forEach(([name, version]) => {
+          console.log(`  ${name} -> ${version}`)
+        })
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      process.exit(1)
+    }
+  })
+
+// Set an alias
+aliasCommand
+  .command('set <name> <version>')
+  .description('Set an alias for a Node.js version')
+  .action((name: string, version: string) => {
+    try {
+      // Normalize and validate the version
+      const normalizedVersion = normalizeVersion(version)
+
+      // Check if the version is installed
+      if (!isVersionInstalled(normalizedVersion)) {
+        console.error(
+          `Node.js ${normalizedVersion} is not installed. Install it first with: nvmx install ${normalizedVersion}`,
+        )
+        process.exit(1)
+      }
+
+      setAlias(name, normalizedVersion)
+      console.log(`Alias '${name}' set to Node.js ${normalizedVersion}`)
+    } catch (error) {
+      console.error('Error:', error)
+      process.exit(1)
+    }
+  })
+
+// Remove an alias
+aliasCommand
+  .command('rm <name>')
+  .alias('remove')
+  .description('Remove an alias')
+  .action((name: string) => {
+    try {
+      if (removeAlias(name)) {
+        console.log(`Alias '${name}' removed`)
+      } else {
+        console.error(`Alias '${name}' not found`)
+        process.exit(1)
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      process.exit(1)
+    }
+  })
+
+// Update command
+program
+  .command('update')
+  .description('Update nvmx to the latest version')
+  .action(async () => {
+    try {
+      const result = await updateNvmx()
+      console.log(result.message)
+
+      if (!result.success) {
+        process.exit(1)
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      process.exit(1)
+    }
+  })
+
+// Check for updates command
+program
+  .command('check-update')
+  .description('Check if a new version of nvmx is available')
+  .action(async () => {
+    try {
+      const { hasUpdate, latestVersion } = await checkForUpdates()
+
+      if (hasUpdate) {
+        console.log(`A new version of nvmx is available: ${latestVersion}`)
+        console.log('Run "nvmx update" to update to the latest version')
+      } else {
+        console.log(`nvmx is up to date (${latestVersion})`)
+      }
+    } catch (error) {
+      console.error('Error:', error)
+      process.exit(1)
+    }
+  })
+
+// Completion command
+const completionCommand = program
+  .command('completion')
+  .description('Generate shell completion scripts')
+
+completionCommand
+  .command('bash')
+  .description('Generate Bash completion script')
+  .action(() => {
+    console.log(generateBashCompletion())
+  })
+
+completionCommand
+  .command('zsh')
+  .description('Generate Zsh completion script')
+  .action(() => {
+    console.log(generateZshCompletion())
+  })
+
+completionCommand
+  .command('fish')
+  .description('Generate Fish completion script')
+  .action(() => {
+    console.log(generateFishCompletion())
+  })
+
 // Parse command line arguments
 program.parse(process.argv)
 
 // If no arguments provided, show help
 if (process.argv.length === 2) {
   program.help()
+}
+
+// Check for updates in the background (don't await)
+// This will notify the user if a new version is available
+// but won't block the execution of the command
+if (
+  process.argv.length > 2 &&
+  !['update', 'check-update', 'completion'].includes(process.argv[2])
+) {
+  notifyUpdates().catch(() => {
+    // Silently fail - we don't want to interrupt normal operation
+  })
 }
