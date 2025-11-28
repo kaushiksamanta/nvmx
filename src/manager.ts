@@ -25,7 +25,7 @@ import { Path, Url, InstalledVersions, RemoteVersions, NodeRelease } from './typ
 /**
  * Check if a specific Node.js version is installed
  */
-export function isVersionInstalled(version: string): boolean {
+export const isVersionInstalled = (version: string): boolean => {
   const normalizedVersion = normalizeVersion(version)
   const versionDir = path.join(VERSIONS_DIR, normalizedVersion)
   return fs.existsSync(versionDir) && fs.existsSync(path.join(versionDir, 'bin', 'node'))
@@ -34,7 +34,7 @@ export function isVersionInstalled(version: string): boolean {
 /**
  * Get a list of all installed Node.js versions
  */
-export function getInstalledVersions(): InstalledVersions {
+export const getInstalledVersions = (): InstalledVersions => {
   ensureDirectories()
 
   try {
@@ -61,7 +61,7 @@ export function getInstalledVersions(): InstalledVersions {
  * Get a list of available Node.js versions from the remote server
  * Uses cache if available and valid
  */
-export async function getRemoteVersions(forceRefresh = false): Promise<RemoteVersions> {
+export const getRemoteVersions = async (forceRefresh = false): Promise<RemoteVersions> => {
   try {
     // Check if we have a valid cache and should use it
     if (!forceRefresh && isRemoteVersionsCacheValid()) {
@@ -114,7 +114,7 @@ export async function getRemoteVersions(forceRefresh = false): Promise<RemoteVer
 /**
  * Get the latest LTS version from the remote server
  */
-export async function getLatestLTSVersion(): Promise<string | null> {
+export const getLatestLTSVersion = async (): Promise<string | null> => {
   try {
     const mirrorUrl = getMirrorUrl()
     const response = await axios.get(`${mirrorUrl}/index.json`)
@@ -133,7 +133,7 @@ export async function getLatestLTSVersion(): Promise<string | null> {
 /**
  * Install a specific Node.js version
  */
-export async function installVersion(version: string): Promise<void> {
+export const installVersion = async (version: string): Promise<void> => {
   const normalizedVersion = normalizeVersion(version)
 
   if (isVersionInstalled(normalizedVersion)) {
@@ -181,7 +181,7 @@ export async function installVersion(version: string): Promise<void> {
 /**
  * Use a specific Node.js version by executing the use.sh script
  */
-export async function useVersion(version: string): Promise<string> {
+export const useVersion = async (version: string): Promise<string> => {
   const normalizedVersion = normalizeVersion(version)
 
   if (!isVersionInstalled(normalizedVersion)) {
@@ -202,7 +202,7 @@ export async function useVersion(version: string): Promise<string> {
 /**
  * Uninstall a specific Node.js version
  */
-export function uninstallVersion(version: string): void {
+export const uninstallVersion = (version: string): void => {
   const normalizedVersion = normalizeVersion(version)
   const versionDir = path.join(VERSIONS_DIR, normalizedVersion)
 

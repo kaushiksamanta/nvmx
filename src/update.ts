@@ -17,7 +17,7 @@ const GITHUB_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}`
 /**
  * Check if a new version is available
  */
-export async function checkForUpdates(): Promise<{ hasUpdate: boolean; latestVersion: string }> {
+export const checkForUpdates = async (): Promise<{ hasUpdate: boolean; latestVersion: string }> => {
   try {
     // Fetch latest release from GitHub API
     const response = await axios.get(`${GITHUB_API_URL}/releases/latest`)
@@ -36,7 +36,7 @@ export async function checkForUpdates(): Promise<{ hasUpdate: boolean; latestVer
 /**
  * Update nvmx to the latest version
  */
-export async function updateNvmx(): Promise<{ success: boolean; message: string }> {
+export const updateNvmx = async (): Promise<{ success: boolean; message: string }> => {
   try {
     // Check if we have an update
     const { hasUpdate, latestVersion } = await checkForUpdates()
@@ -81,7 +81,7 @@ export async function updateNvmx(): Promise<{ success: boolean; message: string 
 /**
  * Check for updates and notify if available
  */
-export async function notifyUpdates(): Promise<void> {
+export const notifyUpdates = async (): Promise<void> => {
   try {
     const { hasUpdate, latestVersion } = await checkForUpdates()
 

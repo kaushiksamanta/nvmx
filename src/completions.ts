@@ -5,7 +5,7 @@
 /**
  * Generate Bash completion script
  */
-export function generateBashCompletion(): string {
+export const generateBashCompletion = (): string => {
   return `
 # nvmx bash completion script
 _nvmx_completions() {
@@ -80,7 +80,7 @@ complete -F _nvmx_completions nvmx
 /**
  * Generate Zsh completion script
  */
-export function generateZshCompletion(): string {
+export const generateZshCompletion = (): string => {
   return `
 #compdef nvmx
 
@@ -216,7 +216,7 @@ _nvmx
 /**
  * Generate Fish completion script
  */
-export function generateFishCompletion(): string {
+export const generateFishCompletion = (): string => {
   return `
 # nvmx fish completion
 

@@ -15,7 +15,7 @@ export const VERSIONS_DIR = path.join(NVMX_HOME, 'versions')
 export const CACHE_DIR = path.join(NVMX_HOME, 'cache')
 
 // Ensure directories exist
-export function ensureDirectories(): void {
+export const ensureDirectories = (): void => {
   ;[NVMX_HOME, VERSIONS_DIR, CACHE_DIR].forEach(dir => {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true })
@@ -24,7 +24,7 @@ export function ensureDirectories(): void {
 }
 
 // Get system architecture
-export function getArch(): Arch {
+export const getArch = (): Arch => {
   const arch = os.arch()
   switch (arch) {
     case 'x64':
@@ -37,7 +37,7 @@ export function getArch(): Arch {
 }
 
 // Get system platform
-export function getPlatform(): Platform {
+export const getPlatform = (): Platform => {
   const platform = os.platform()
   switch (platform) {
     case 'darwin':
@@ -50,12 +50,12 @@ export function getPlatform(): Platform {
 }
 
 // Normalize version string (add 'v' prefix if missing)
-export function normalizeVersion(version: string): Version {
+export const normalizeVersion = (version: string): Version => {
   return version.startsWith('v') ? (version as Version) : (`v${version}` as Version)
 }
 
 // Download a file
-export async function downloadFile(url: Url, destination: Path): Promise<void> {
+export const downloadFile = async (url: Url, destination: Path): Promise<void> => {
   const response = await axios({
     method: 'GET',
     url,
@@ -73,7 +73,7 @@ export async function downloadFile(url: Url, destination: Path): Promise<void> {
 }
 
 // Extract a tarball
-export async function extractTarball(tarballPath: Path, destination: Path): Promise<void> {
+export const extractTarball = async (tarballPath: Path, destination: Path): Promise<void> => {
   await tar.extract({
     file: tarballPath,
     cwd: destination,
@@ -81,7 +81,7 @@ export async function extractTarball(tarballPath: Path, destination: Path): Prom
 }
 
 // Get currently active Node.js version
-export async function getCurrentVersion(): Promise<Version | null> {
+export const getCurrentVersion = async (): Promise<Version | null> => {
   try {
     const { stdout } = await execFile('node', ['--version'])
     return stdout.trim() as Version
@@ -91,7 +91,7 @@ export async function getCurrentVersion(): Promise<Version | null> {
 }
 
 // Find .nvmxrc or .node-version file in current or parent directories
-export function findVersionFile(startDir: Path = process.cwd() as Path): Path | null {
+export const findVersionFile = (startDir: Path = process.cwd() as Path): Path | null => {
   let currentDir = startDir
 
   while (currentDir !== path.parse(currentDir).root) {
@@ -113,7 +113,7 @@ export function findVersionFile(startDir: Path = process.cwd() as Path): Path | 
 }
 
 // Read version from .nvmxrc or .node-version file
-export function readVersionFile(filePath: Path): Version | null {
+export const readVersionFile = (filePath: Path): Version | null => {
   try {
     const version = fs.readFileSync(filePath, 'utf8').trim()
     return version ? normalizeVersion(version) : null
@@ -123,7 +123,10 @@ export function readVersionFile(filePath: Path): Version | null {
 }
 
 // Execute a shell script
-export async function executeShellScript(scriptPath: Path, args: string[] = []): Promise<string> {
+export const executeShellScript = async (
+  scriptPath: Path,
+  args: string[] = [],
+): Promise<string> => {
   const { stdout, stderr } = await execFile(scriptPath, args)
 
   if (stderr) {

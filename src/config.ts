@@ -20,7 +20,7 @@ const CONFIG_PATH = path.join(NVMX_HOME, 'config.json')
 /**
  * Load configuration from config file
  */
-export function loadConfig(): NvmxConfig {
+export const loadConfig = (): NvmxConfig => {
   try {
     if (fs.existsSync(CONFIG_PATH)) {
       const configData = fs.readFileSync(CONFIG_PATH, 'utf8')
@@ -37,7 +37,7 @@ export function loadConfig(): NvmxConfig {
 /**
  * Save configuration to config file
  */
-export function saveConfig(config: Partial<NvmxConfig>): void {
+export const saveConfig = (config: Partial<NvmxConfig>): void => {
   try {
     const currentConfig = loadConfig()
     const newConfig = { ...currentConfig, ...config }
@@ -56,63 +56,63 @@ export function saveConfig(config: Partial<NvmxConfig>): void {
 /**
  * Get the Node.js mirror URL
  */
-export function getMirrorUrl(): string {
+export const getMirrorUrl = (): string => {
   return loadConfig().mirrorUrl
 }
 
 /**
  * Get the proxy URL if configured
  */
-export function getProxyUrl(): string | undefined {
+export const getProxyUrl = (): string | undefined => {
   return loadConfig().proxyUrl
 }
 
 /**
  * Get the default Node.js version if configured
  */
-export function getDefaultVersion(): string | undefined {
+export const getDefaultVersion = (): string | undefined => {
   return loadConfig().defaultVersion
 }
 
 /**
  * Set the default Node.js version
  */
-export function setDefaultVersion(version: string): void {
+export const setDefaultVersion = (version: string): void => {
   saveConfig({ defaultVersion: version })
 }
 
 /**
  * Set the Node.js mirror URL
  */
-export function setMirrorUrl(url: string): void {
+export const setMirrorUrl = (url: string): void => {
   saveConfig({ mirrorUrl: url })
 }
 
 /**
  * Set the proxy URL
  */
-export function setProxyUrl(url: string | undefined): void {
+export const setProxyUrl = (url: string | undefined): void => {
   saveConfig({ proxyUrl: url })
 }
 
 /**
  * Get the cache configuration
  */
-export function getCacheConfig(): NvmxConfig['cache'] {
+export const getCacheConfig = (): NvmxConfig['cache'] => {
   return loadConfig().cache
 }
 
 /**
  * Get all aliases
  */
-export function getAliases(): Aliases {
+export const getAliases = (): Aliases => {
   return loadConfig().aliases || {}
 }
 
 /**
  * Get a specific alias
  */
-export function getAlias(name: string): string | undefined {
+export const getAlias = (name: string): string | undefined => {
   const aliases = getAliases()
   return aliases[name]
 }
@@ -120,7 +120,7 @@ export function getAlias(name: string): string | undefined {
 /**
  * Set an alias for a Node.js version
  */
-export function setAlias(name: string, version: string): void {
+export const setAlias = (name: string, version: string): void => {
   const aliases = getAliases()
   aliases[name] = version
   saveConfig({ aliases })
@@ -129,7 +129,7 @@ export function setAlias(name: string, version: string): void {
 /**
  * Remove an alias
  */
-export function removeAlias(name: string): boolean {
+export const removeAlias = (name: string): boolean => {
   const aliases = getAliases()
   if (aliases[name]) {
     delete aliases[name]
@@ -142,7 +142,7 @@ export function removeAlias(name: string): boolean {
 /**
  * Resolve a version or alias to a version
  */
-export function resolveVersionOrAlias(versionOrAlias: string): string {
+export const resolveVersionOrAlias = (versionOrAlias: string): string => {
   const alias = getAlias(versionOrAlias)
   return alias || versionOrAlias
 }
@@ -150,16 +150,16 @@ export function resolveVersionOrAlias(versionOrAlias: string): string {
 /**
  * Get the remote versions cache
  */
-export function getRemoteVersionsCache():
+export const getRemoteVersionsCache = ():
   | { versions: string[]; timestamp: number; ttl: number }
-  | undefined {
+  | undefined => {
   return loadConfig().remoteVersionsCache
 }
 
 /**
  * Set the remote versions cache
  */
-export function setRemoteVersionsCache(versions: string[]): void {
+export const setRemoteVersionsCache = (versions: string[]): void => {
   const cache = {
     versions,
     timestamp: Date.now(),
@@ -171,7 +171,7 @@ export function setRemoteVersionsCache(versions: string[]): void {
 /**
  * Check if the remote versions cache is valid
  */
-export function isRemoteVersionsCacheValid(): boolean {
+export const isRemoteVersionsCacheValid = (): boolean => {
   const cache = getRemoteVersionsCache()
   if (!cache) return false
 
@@ -185,7 +185,7 @@ export function isRemoteVersionsCacheValid(): boolean {
 /**
  * Set the remote versions cache TTL
  */
-export function setRemoteVersionsCacheTTL(ttl: number): void {
+export const setRemoteVersionsCacheTTL = (ttl: number): void => {
   const cache = getRemoteVersionsCache()
   if (cache) {
     cache.ttl = ttl
