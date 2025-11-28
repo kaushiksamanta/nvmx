@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { NVMX_HOME } from './utils'
-import { NvmxConfig, Aliases, RemoteVersionsCacheSchema } from './types'
+import { NvmxConfig, Aliases } from './types'
 
 const DEFAULT_CONFIG: NvmxConfig = {
   mirrorUrl: 'https://nodejs.org/dist',

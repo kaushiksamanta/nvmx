@@ -4,6 +4,7 @@ import { Command } from 'commander'
 import {
   getInstalledVersions,
   getRemoteVersions,
+  getLatestLTSVersion,
   installVersion,
   uninstallVersion,
   isVersionInstalled,
@@ -23,7 +24,6 @@ import {
   getDefaultVersion,
   setDefaultVersion,
   getAliases,
-  getAlias,
   setAlias,
   removeAlias,
   resolveVersionOrAlias,
@@ -37,6 +37,7 @@ import {
 } from './completions'
 import { checkForUpdates, updateNvmx, notifyUpdates } from './update'
 import { ConfigKey } from './types'
+import { version as packageVersion } from '../package.json'
 
 // Initialize the program
 const program = new Command()
@@ -45,7 +46,7 @@ const program = new Command()
 program
   .name('nvmx')
   .description('POSIX-compliant Node.js version manager written in TypeScript')
-  .version('0.1.0')
+  .version(packageVersion)
 
 // Install command
 program
@@ -66,14 +67,31 @@ program
           }
         }
 
-        // If still no version, use default or latest
+        // If still no version, use default or latest LTS
         if (!versionOrAlias) {
           versionOrAlias = getDefaultVersion()
           if (!versionOrAlias) {
             console.log('No version specified, installing latest LTS version...')
-            const versions = await getRemoteVersions()
-            versionOrAlias = versions.find(v => v.includes('lts')) || versions[0]
+            const ltsVersion = await getLatestLTSVersion()
+            if (ltsVersion) {
+              versionOrAlias = ltsVersion
+            } else {
+              const versions = await getRemoteVersions()
+              versionOrAlias = versions[0]
+            }
           }
+        }
+      }
+
+      // Handle 'lts' alias specially
+      if (versionOrAlias.toLowerCase() === 'lts') {
+        const ltsVersion = await getLatestLTSVersion()
+        if (ltsVersion) {
+          versionOrAlias = ltsVersion
+          console.log(`Latest LTS version: ${ltsVersion}`)
+        } else {
+          console.error('Failed to fetch latest LTS version')
+          process.exit(1)
         }
       }
 

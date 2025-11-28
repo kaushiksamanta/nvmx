@@ -322,6 +322,28 @@ The test suite covers:
 
 ## Contributing
 
+Contributions are welcome! Here's how you can help:
+
+1. **Fork the repository** and create your branch from `main`
+2. **Install dependencies**: `npm install`
+3. **Make your changes** and ensure tests pass: `npm test`
+4. **Run linting**: `npm run lint:fix`
+5. **Format code**: `npm run format`
+6. **Submit a pull request**
+
+### Development Guidelines
+
+- Follow the existing code style (no semicolons, single quotes)
+- Add tests for new features
+- Update documentation as needed
+- Keep commits focused and atomic
+
+### Reporting Issues
+
+- Use GitHub Issues to report bugs
+- Include your OS, Node.js version, and nvmx version
+- Provide steps to reproduce the issue
+
 ## License
 
 MIT

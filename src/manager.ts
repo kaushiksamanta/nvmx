@@ -20,7 +20,7 @@ import {
   setRemoteVersionsCache,
   isRemoteVersionsCacheValid,
 } from './config'
-import { Path, Url, InstalledVersions, RemoteVersions } from './types'
+import { Path, Url, InstalledVersions, RemoteVersions, NodeRelease } from './types'
 
 /**
  * Check if a specific Node.js version is installed
@@ -75,42 +75,22 @@ export async function getRemoteVersions(forceRefresh = false): Promise<RemoteVer
     const mirrorUrl = getMirrorUrl()
     const proxyUrl = getProxyUrl()
 
-    // Define proper types for axios request config
-    interface AxiosRequestConfig {
-      proxy?: {
-        protocol: string
-        host: string
-        port: number
-      }
-    }
-
-    // Create request config
-    const config: AxiosRequestConfig = {}
+    // Create request config with proxy if configured
+    const config: { proxy?: { protocol: string; host: string; port: number } } = {}
     if (proxyUrl) {
-      // Convert string proxy URL to axios proxy config
+      const proxyUrlObj = new URL(proxyUrl)
       config.proxy = {
-        protocol: proxyUrl.startsWith('https') ? 'https' : 'http',
-        host: new URL(proxyUrl).hostname,
-        port: parseInt(new URL(proxyUrl).port, 10) || (proxyUrl.startsWith('https') ? 443 : 80),
+        protocol: proxyUrlObj.protocol.replace(':', ''),
+        host: proxyUrlObj.hostname,
+        port: parseInt(proxyUrlObj.port, 10) || (proxyUrl.startsWith('https') ? 443 : 80),
       }
     }
 
     console.log('Fetching available Node.js versions from remote server...')
     const response = await axios.get(`${mirrorUrl}/index.json`, config)
 
-    // Define proper type for Node.js release
-    interface NodeReleaseInfo {
-      version: string
-      date: string
-      files: string[]
-      npm?: string
-      v8?: string
-      lts?: string | boolean
-      security?: boolean
-    }
-
     const versions = response.data
-      .map((release: NodeReleaseInfo) => release.version)
+      .map((release: NodeRelease) => release.version)
       .filter((version: string) => semver.valid(version))
       .sort((a: string, b: string) => semver.compare(b, a)) // Sort in descending order
 
@@ -128,6 +108,25 @@ export async function getRemoteVersions(forceRefresh = false): Promise<RemoteVer
 
     console.error('Error fetching remote versions:', error)
     throw new Error(`Failed to fetch available Node.js versions: ${error}`)
+  }
+}
+
+/**
+ * Get the latest LTS version from the remote server
+ */
+export async function getLatestLTSVersion(): Promise<string | null> {
+  try {
+    const mirrorUrl = getMirrorUrl()
+    const response = await axios.get(`${mirrorUrl}/index.json`)
+
+    const ltsRelease = response.data.find(
+      (release: NodeRelease) => release.lts && typeof release.lts === 'string',
+    )
+
+    return ltsRelease ? ltsRelease.version : null
+  } catch (error) {
+    console.error('Error fetching LTS version:', error)
+    return null
   }
 }
 

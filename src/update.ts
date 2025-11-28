@@ -5,6 +5,7 @@ import semver from 'semver'
 import { promisify } from 'util'
 import { exec as execCallback } from 'child_process'
 import { NVMX_HOME } from './utils'
+import { version as CURRENT_VERSION } from '../package.json'
 
 const exec = promisify(execCallback)
 
@@ -12,9 +13,6 @@ const exec = promisify(execCallback)
 const REPO_OWNER = 'kaushiksamanta'
 const REPO_NAME = 'nvmx'
 const GITHUB_API_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}`
-
-// Current version (should match package.json)
-const CURRENT_VERSION = '0.1.0'
 
 /**
  * Check if a new version is available

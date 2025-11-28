@@ -4,10 +4,10 @@ import os from 'os'
 import axios from 'axios'
 import tar from 'tar'
 import { promisify } from 'util'
-import { exec as execCallback } from 'child_process'
+import { execFile as execFileCallback } from 'child_process'
 import { Version, Arch, Platform, Path, Url } from './types'
 
-const exec = promisify(execCallback)
+const execFile = promisify(execFileCallback)
 
 // Default paths
 export const NVMX_HOME = process.env.NVMX_HOME || path.join(os.homedir(), '.nvmx')
@@ -83,7 +83,7 @@ export async function extractTarball(tarballPath: Path, destination: Path): Prom
 // Get currently active Node.js version
 export async function getCurrentVersion(): Promise<Version | null> {
   try {
-    const { stdout } = await exec('node --version')
+    const { stdout } = await execFile('node', ['--version'])
     return stdout.trim() as Version
   } catch (error) {
     return null
@@ -124,10 +124,10 @@ export function readVersionFile(filePath: Path): Version | null {
 
 // Execute a shell script
 export async function executeShellScript(scriptPath: Path, args: string[] = []): Promise<string> {
-  const { stdout, stderr } = await exec(`${scriptPath} ${args.join(' ')}`)
+  const { stdout, stderr } = await execFile(scriptPath, args)
 
   if (stderr) {
-    throw new Error(stderr)
+    console.warn('Shell script stderr:', stderr)
   }
 
   return stdout.trim()
